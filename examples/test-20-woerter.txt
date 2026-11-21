@@ -1,0 +1,20 @@
+あさ	朝	Morgen
+ばん	晩	Abend
+きょう	今日	heute
+あした	明日	morgen
+ほん	本	Buch
+いえ	家	Haus, Zuhause
+がっこう	学校	Schule
+としょかん	図書館	Bibliothek
+えいが	映画	Film
+おんがく	音楽	Musik
+さかな	魚	Fisch
+にく	肉	Fleisch
+やさい	野菜	Gemüse
+みる	見る	sehen, schauen
+ねる	寝る	schlafen
+おきる	起きる	aufstehen
+はなす	話す	sprechen
+よむ	読む	lesen
+かう	買う	kaufen
+コーヒー		Kaffee
