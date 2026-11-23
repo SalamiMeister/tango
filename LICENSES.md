@@ -11,6 +11,7 @@ Der Code dieses Projekts ist ein privates Projekt. (Lizenz nach Wunsch ergänzen
 | [Dexie.js](https://dexie.org) / dexie-react-hooks | Datenbank (IndexedDB) | Apache-2.0 |
 | [ts-fsrs](https://github.com/open-spaced-repetition/ts-fsrs) | Wiederholungsalgorithmus FSRS | MIT |
 | [WanaKana](https://wanakana.com) | Romaji ↔ Kana | MIT |
+| [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) | QR-Code zum Verbinden weiterer Geräte | MIT |
 | [Workbox](https://developer.chrome.com/docs/workbox) (über vite-plugin-pwa) | Offline-Betrieb (Service Worker) | MIT |
 
 ## Werkzeuge (nur zum Entwickeln, nicht in der App enthalten)

@@ -10,6 +10,8 @@ import { WordEdit } from './pages/WordEdit';
 import { Import } from './pages/Import';
 import { SettingsPage } from './pages/SettingsPage';
 import { QuickAdd } from './components/QuickAdd';
+import { SyncBadge } from './components/SyncBadge';
+import { SyncSetup } from './pages/SyncSetup';
 
 const NAV = [
   { path: '', label: 'Start', icon: '⌂' },
@@ -65,12 +67,16 @@ export function App() {
     case 'einstellungen':
       page = <SettingsPage />;
       break;
+    case 'sync':
+      page = <SyncSetup route={route} />;
+      break;
     default:
       page = <Home />;
   }
 
   return (
     <div className={`app ${learning ? 'is-learning' : ''}`}>
+      {!learning && <SyncBadge />}
       <main>{page}</main>
 
       {/* Auf der Import-Seite würde der Knopf den Import-Knopf verdecken */}

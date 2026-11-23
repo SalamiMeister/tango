@@ -21,3 +21,20 @@ Kurze Begründungen für Festlegungen, die SPEC.md offen lässt oder leicht abwa
 **Tastenkürzel schon in Stufe 1** (Leertaste, 1–4, Rücktaste = rückgängig, N = neue Vokabel), weil der Aufwand klein ist. Wischgesten folgen in Stufe 2.
 
 **Icons werden per Skript erzeugt** (`npm run icons`), damit keine Grafikbibliothek nötig ist.
+
+## 2026-11-21 – Stufe 2
+
+**Synchronisation über ein privates GitHub-Repo statt OneDrive** (Entscheidung des Nutzers). Für die OneDrive-Anbindung müsste die App im Microsoft-Entra-Portal registriert werden. Das geht mit einem privaten Microsoft-Konto allein nicht mehr; nötig ist ein Azure-Konto mit Abo (meist mit Kreditkarte), und ob die Registrierung nach Ablauf der Testphase weiter funktioniert, ist offiziell nicht zugesichert. GitHub ist bereits vorhanden und kostenlos. Die Daten liegen als `tango-sync.json` in einem privaten Repo; jeder Sync, der etwas hochlädt, erzeugt dort einen Commit (praktischer Nebeneffekt: Versionsgeschichte der Lerndaten).
+- Zugriff per **Fine-grained Token**, nur „Contents: Read and write“ für dieses eine Repo. Gespeichert im localStorage des Geräts, nicht in der Datenbank und nicht im Backup.
+- Die App prüft beim Verbinden, dass das Repo **privat** ist, und verweigert sonst.
+- Gleichzeitiges Schreiben zweier Geräte: GitHub lehnt das Überschreiben mit veralteter Version (sha) ab → neu lesen, zusammenführen, nochmal (bis 3 Versuche).
+- Zusammenführen pro Datensatz nach `updated_at` (wie beim JSON-Backup). Hat dieselbe Karte auf zwei Geräten offline Bewertungen bekommen, gewinnt der neuere Stand komplett (die ältere Bewertung geht verloren) – für eine Person mit zwei Geräten vertretbar.
+- Weitere Geräte: Einrichtungs-Link/QR-Code. Der Token steht hinter dem `#` (wird nie an einen Server geschickt) und wird nach dem Öffnen sofort aus Adresszeile und Verlauf entfernt; eingerichtet wird erst nach einem Tipp auf „Verbinden“.
+
+**Ein gemeinsamer Ablauf für alle FSRS-Modi** (`learn/useReviewSession.ts`). Bei Auswahl/Eintippen wird die Bewertung sofort beim Antworten gespeichert; „Ich lag richtig“ ersetzt sie.
+
+**Wertung:** Multiple Choice/Hören richtig = Gut, falsch = Nochmal. Eintippen richtig = Gut, ein Tippfehler (ab 5 Buchstaben, inkl. Buchstabendreher) = Schwer, falsch = Nochmal. Hören fragt immer JP→DE ab. Zuordnen beeinflusst FSRS nicht.
+
+**Problemwörter** = Karte mindestens zweimal vergessen (Lapses ≥ 2 oder ≥ 2× „Nochmal“ nach der ersten Lernphase). Mit dem Filter werden sie unabhängig von der Fälligkeit geübt.
+
+**Wischgesten** auf der Karteikarte: ← Nochmal, → Gut, ↑ Leicht, ↓ Schwer.

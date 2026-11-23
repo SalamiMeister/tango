@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import { useReviews, useSettings, useWords } from '../hooks';
-import { countNewToday, queueParts, streakDays } from '../lib/session';
+import { countNewToday, problemWordIds, queueParts, streakDays } from '../lib/session';
+import { MODES, type Mode } from '../learn/modes';
+import { PARTS_OF_SPEECH } from '../types';
 import { navigate } from '../router';
 import { analyzeTable, rowsToDrafts } from '../lib/tableImport';
 import { applyImport, previewImport } from '../repo';
@@ -17,6 +19,10 @@ export function Home() {
   const toast = useToast();
   const [lesson, setLesson] = useState('');
   const [direction, setDirection] = useState<DirectionSetting | ''>('');
+  const [mode, setMode] = useState<Mode>('karten');
+  const [pos, setPos] = useState('');
+  const [onlyDue, setOnlyDue] = useState(false);
+  const [onlyProblem, setOnlyProblem] = useState(false);
 
   const stats = useMemo(() => {
     if (!words || !reviews) return null;
@@ -29,6 +35,7 @@ export function Home() {
       words: words.length,
       active: words.filter((w) => w.active).length,
       streak: streakDays(reviews, now),
+      problems: problemWordIds(reviews).size,
     };
   }, [words, reviews, settings]);
 
@@ -75,6 +82,20 @@ export function Home() {
             </small>
           </button>
 
+          {/* Andere Modi mit einem Tipp (gleiche Karten, andere Abfrage) */}
+          <div className="mode-chips">
+            {MODES.filter((m) => m.id !== 'karten').map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => navigate(`/lernen?modus=${m.id}`)}
+                disabled={m.fsrs && total === 0}
+              >
+                {m.short}
+              </button>
+            ))}
+          </div>
+
           <div className="stats">
             <div>
               <b>{stats.due}</b>
@@ -96,6 +117,16 @@ export function Home() {
 
           <details className="card">
             <summary>Gezielt lernen</summary>
+            <label>
+              <span>Modus</span>
+              <select value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
+                {MODES.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div className="row">
               <label className="grow">
                 <span>Lektion</span>
@@ -118,12 +149,34 @@ export function Home() {
                 </select>
               </label>
             </div>
+            <label>
+              <span>Wortart</span>
+              <select value={pos} onChange={(e) => setPos(e.target.value)}>
+                <option value="">alle</option>
+                {PARTS_OF_SPEECH.map((p) => (
+                  <option key={p}>{p}</option>
+                ))}
+              </select>
+            </label>
+            <label className="check">
+              <input type="checkbox" checked={onlyDue} onChange={(e) => setOnlyDue(e.target.checked)} />
+              <span>nur fällige (keine neuen)</span>
+            </label>
+            <label className="check">
+              <input type="checkbox" checked={onlyProblem} onChange={(e) => setOnlyProblem(e.target.checked)} />
+              <span>nur Problemwörter ({stats.problems}) – auch wenn nicht fällig</span>
+            </label>
             <button
               type="button"
+              className="primary"
               onClick={() => {
                 const q = new URLSearchParams();
+                if (mode !== 'karten') q.set('modus', mode);
                 if (lesson) q.set('lektion', lesson);
                 if (direction) q.set('richtung', direction);
+                if (pos) q.set('wortart', pos);
+                if (onlyDue) q.set('nurFaellig', '1');
+                if (onlyProblem) q.set('problem', '1');
                 navigate(`/lernen?${q}`);
               }}
             >

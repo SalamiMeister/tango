@@ -1,6 +1,6 @@
 // Zusammenstellung einer Lerneinheit und Zählwerte für den Startbildschirm (pur).
 
-import type { DirectionSetting, Review, Settings, Word } from '../types';
+import type { DirectionSetting, PartOfSpeech, Review, Settings, Word } from '../types';
 import { STATE } from './fsrs';
 
 /** Karten in der Lernphase, die in den nächsten 20 Min fällig werden, dürfen schon jetzt kommen. */
@@ -14,6 +14,22 @@ export interface SessionFilter {
   tag?: string;
   /** Nur fällige Karten, keine neuen */
   onlyDue?: boolean;
+  /** Nur diese Wortart */
+  pos?: PartOfSpeech;
+  /** Nur Problemwörter – diese werden geübt, auch wenn sie noch nicht fällig sind */
+  onlyProblem?: boolean;
+}
+
+/**
+ * Problemwort: in einer Richtung mindestens 2× vergessen
+ * („Nochmal“ bei einer Karte, die schon gelernt war).
+ */
+export function isProblemReview(r: Review): boolean {
+  return r.lapses >= 2 || r.history.filter((h) => h.r === 1 && h.s !== STATE.New).length >= 2;
+}
+
+export function problemWordIds(reviews: Review[]): Set<string> {
+  return new Set(reviews.filter((r) => !r.deleted && isProblemReview(r)).map((r) => r.word_id));
 }
 
 /** Beginn des heutigen Tages (lokale Zeit) in ms. */
@@ -52,6 +68,7 @@ export function eligibleReviews(words: Word[], reviews: Review[], filter: Sessio
     if (filter.direction !== 'both' && r.direction !== filter.direction) return false;
     if (filter.lesson !== undefined && w.lesson !== filter.lesson) return false;
     if (filter.tag && !w.tags.includes(filter.tag)) return false;
+    if (filter.pos && w.part_of_speech !== filter.pos) return false;
     return true;
   });
 }
@@ -72,6 +89,15 @@ export function queueParts(
   now: number,
 ): QueueParts {
   const eligible = eligibleReviews(words, reviews, filter);
+
+  if (filter.onlyProblem) {
+    const problems = problemWordIds(reviews);
+    const due = eligible
+      .filter((r) => r.state !== STATE.New && problems.has(r.word_id))
+      .sort((a, b) => a.due - b.due);
+    return { due, fresh: [] };
+  }
+
   const due = eligible.filter((r) => isDue(r, now)).sort((a, b) => a.due - b.due);
 
   if (filter.onlyDue) return { due, fresh: [] };

@@ -62,6 +62,27 @@ describe('queueParts', () => {
   });
 });
 
+describe('Filter Wortart und Problemwörter', () => {
+  it('Wortart-Filter', () => {
+    const words = [word('w1', { part_of_speech: 'Nomen' }), word('w2', { part_of_speech: 'u-Verb' })];
+    const res = queueParts(words, words.flatMap(both), DEFAULT_SETTINGS, { direction: 'jp_de', pos: 'u-Verb' }, NOW);
+    expect(res.fresh.map((r) => r.word_id)).toEqual(['w2']);
+  });
+  it('Problemwörter kommen auch, wenn sie nicht fällig sind', () => {
+    const words = [word('w1'), word('w2')];
+    // w1: gelernt und zweimal vergessen, nächste Fälligkeit in der Zukunft
+    let r1 = rateReview(newReview('w1', 'jp_de', 0), 4, NOW - 20 * DAY);
+    r1 = rateReview(r1, 1, r1.due);
+    r1 = rateReview(r1, 3, r1.due);
+    r1 = rateReview(r1, 1, r1.due);
+    r1 = { ...rateReview(r1, 3, r1.due), due: NOW + 5 * DAY };
+    const r2 = { ...rateReview(newReview('w2', 'jp_de', 0), 4, NOW - 10 * DAY), due: NOW + DAY };
+    const res = queueParts(words, [r1, r2], DEFAULT_SETTINGS, { direction: 'jp_de', onlyProblem: true }, NOW);
+    expect(res.due.map((r) => r.word_id)).toEqual(['w1']);
+    expect(res.fresh).toEqual([]);
+  });
+});
+
 describe('buildSessionQueue', () => {
   const mk = (n: number, prefix: string) => Array.from({ length: n }, (_, i) => newReview(`${prefix}${i}`, 'jp_de', 0));
   it('begrenzt auf die Einheitsgröße und mischt Neues ein', () => {

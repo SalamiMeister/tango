@@ -6,6 +6,7 @@ import { exportBackup, importBackup, saveSettings } from '../repo';
 import { useToast } from '../components/Toast';
 import { downloadText, readTextFile } from '../lib/download';
 import { getPref } from '../lib/localPrefs';
+import { SyncSettings } from '../components/SyncSettings';
 import type { DirectionSetting, Settings } from '../types';
 
 export function SettingsPage() {
@@ -94,11 +95,14 @@ export function SettingsPage() {
         </label>
       </div>
 
+      <SyncSettings />
+
       <div className="card">
         <h3>Daten</h3>
         <p className="muted small">
-          Alle Daten liegen nur auf diesem Gerät. Ein Backup kannst du auf einem anderen Gerät einspielen –
-          vorhandene Daten bleiben erhalten, pro Eintrag gewinnt der neuere Stand.
+          Die Daten liegen auf diesem Gerät (und, falls eingerichtet, in deinem privaten Sync-Repo). Ein Backup
+          kannst du jederzeit exportieren und auf einem anderen Gerät einspielen – vorhandene Daten bleiben
+          erhalten, pro Eintrag gewinnt der neuere Stand.
         </p>
         <div className="row wrap">
           <button type="button" onClick={doExport}>
@@ -138,7 +142,8 @@ export function SettingsPage() {
         </p>
         <p className="muted small">
           Wiederholungsplanung mit FSRS (ts-fsrs, MIT). Romaji→Kana mit WanaKana (MIT). Datenbank mit Dexie.js
-          (Apache 2.0). Oberfläche mit React (MIT). Vollständige Liste in LICENSES.md. Externe Wörterbuch- oder
+          (Apache 2.0). Oberfläche mit React (MIT). QR-Codes mit qrcode-generator (MIT). Vollständige Liste in
+          LICENSES.md. Externe Wörterbuch- oder
           Satzdaten werden in dieser Version noch nicht verwendet.
         </p>
       </div>

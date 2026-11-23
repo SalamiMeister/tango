@@ -29,7 +29,7 @@ Der Nutzer programmiert selbst nur rudimentär (Python/Java). Code soll daher ei
 - **kuromoji.js** (oder vergleichbar) zur Zerlegung japanischer Sätze in Wörter (für Lesepassagen).
 - **Web Speech API** (`ja-JP`) für Sprachausgabe – keine Audiodateien nötig.
 - **Hosting**: statisch auf GitHub Pages (kostenlos). Kein eigener Server.
-- **Synchronisation**: Microsoft Graph API (OneDrive, App-Ordner `approot`) mit **MSAL.js**, Anmeldung mit privatem Microsoft-Konto (siehe Abschnitt 8).
+- **Synchronisation**: JSON-Datei in einem **privaten GitHub-Repository** über die GitHub-API, Zugriff mit einem Fine-grained Token, der nur dieses Repo lesen/schreiben darf (siehe Abschnitt 8). *(Geändert am 2026-11-21: ursprünglich OneDrive/MSAL – siehe ENTSCHEIDUNGEN.md.)*
 - Code-Verwaltung: Git + GitHub. Projektordner liegt lokal und **nicht** in einem OneDrive-Ordner.
 - Mobile-first-Layout, große Tipp-Flächen, Dark Mode.
 - Oberflächensprache: Deutsch.
@@ -121,17 +121,19 @@ Ziel: kurze Texte lesen, die fast nur aus bekannten Wörtern bestehen.
 - Vorlesen des Satzes / Textes.
 - Übersetzung erst auf Tipp aufdecken.
 
-## 8. Synchronisation über OneDrive
+## 8. Synchronisation über ein privates GitHub-Repository
 
-- Einmalige Anmeldung mit Microsoft-Konto (MSAL.js, Token wird im Browser gespeichert und automatisch erneuert). Danach keine weitere Aktion nötig.
-- Speicherort: App-Ordner im OneDrive des Nutzers (`/Apps/<App-Name>/`); die App bekommt nur Zugriff auf diesen Ordner (Berechtigung `Files.ReadWrite.AppFolder`).
+> Geändert am 2026-11-21. Ursprünglich OneDrive über MSAL.js. Microsoft verlangt für die App-Registrierung inzwischen ein Azure-Konto mit Abo (meist mit Kreditkarte), und es ist ungeklärt, ob die Registrierung nach Ablauf der Testphase weiter funktioniert. Deshalb GitHub (Konto vorhanden, kostenlos). Details: ENTSCHEIDUNGEN.md.
+
+- Einmalige Einrichtung pro Gerät: Repo-Name + Fine-grained Token (nur „Contents: Read and write“ für genau dieses Repo). Weitere Geräte per QR-Code/Einrichtungs-Link. Danach keine weitere Aktion nötig.
+- Speicherort: Datei `tango-sync.json` in einem **privaten** Repo des Nutzers (z. B. `tango-daten`). Die App verweigert öffentliche Repos. Der Token liegt nur im Browser des Geräts und ist nicht Teil des Backups.
 - Inhalt: eine JSON-Datei mit Vokabeln, Lernständen, Lesetexten und Einstellungen (Wörterbuch wird **nicht** synchronisiert).
 - **Automatisch:** beim Öffnen der App, nach jeder abgeschlossenen Lerneinheit und beim Verlassen/Ausblenden der App. Zusätzlich ein Knopf „Jetzt synchronisieren“.
 - **Konflikte:** jeder Datensatz hat `updated_at`; beim Zusammenführen gewinnt pro Datensatz der neueste Stand. Gelöschte Einträge werden als „gelöscht“ markiert statt entfernt, damit sie nicht zurückkehren.
 - **Offline:** Lernen funktioniert immer lokal; Änderungen werden gesammelt und beim nächsten Online-Moment hochgeladen.
 - Kleine Statusanzeige (z. B. Wolkensymbol: synchron / ausstehend / Fehler) – Fehler nie als blockierender Dialog.
 - Manueller JSON-Export/-Import bleibt als Backup erhalten.
-- README enthält eine bebilderte Schritt-für-Schritt-Anleitung zur App-Registrierung im Microsoft-Entra-Portal (kostenlos) inkl. Redirect-URIs für `localhost` und GitHub Pages.
+- README enthält eine Schritt-für-Schritt-Anleitung: privates Repo anlegen, Token erstellen, verbinden, weiteres Gerät hinzufügen.
 
 ## 9. Reibungslose Bedienung (Leitprinzip)
 
@@ -167,7 +169,7 @@ Motivation hängt an niedriger Hürde. Jede Funktion wird daran gemessen:
 **Fertig, wenn:** 20 Genki-Vokabeln in unter 2 Minuten per Einfügen importiert werden können, sie auf Handy und Desktop lernbar sind und die App im Flugmodus funktioniert.
 
 ### Stufe 2 – Synchronisation & Abfragemodi
-- **Zuerst:** OneDrive-Synchronisation (Abschnitt 8) inkl. Anleitung zur App-Registrierung.
+- **Zuerst:** Synchronisation (Abschnitt 8) inkl. Einrichtungsanleitung.
 - Danach: Multiple Choice, Eintippen (WanaKana), Hören, Zuordnen.
 - Tastenkürzel und Wischgesten.
 
