@@ -19,7 +19,7 @@ interface Props {
   onNext: () => void;
 }
 
-const GRADE_FOR: Record<CheckResult, Grade> = { correct: 3, typo: 2, wrong: 1 };
+const GRADE_FOR: Record<CheckResult, Grade> = { correct: 3, variant: 3, typo: 2, wrong: 1 };
 
 export function TypingView({ review, word, answered, onAnswer, onRegrade, onNext }: Props) {
   const [input, setInput] = useState('');
@@ -95,7 +95,9 @@ export function TypingView({ review, word, answered, onAnswer, onRegrade, onNext
                 ? '✓ Als richtig gewertet'
                 : result === 'correct'
                   ? '✓ Richtig'
-                  : result === 'typo'
+                  : result === 'variant'
+                    ? `✓ Richtig – in Kana geschrieben: ${word.kana}`
+                    : result === 'typo'
                     ? '≈ Fast richtig (Tippfehler) – als „Schwer“ gewertet'
                     : '✗ Leider falsch'}
             </div>
@@ -111,7 +113,7 @@ export function TypingView({ review, word, answered, onAnswer, onRegrade, onNext
           </button>
         ) : (
           <>
-            {result !== 'correct' && !overridden && answered && (
+            {(result === 'typo' || result === 'wrong') && !overridden && answered && (
               <button
                 type="button"
                 className="big"

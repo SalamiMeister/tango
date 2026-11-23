@@ -26,7 +26,7 @@ Der Nutzer programmiert selbst nur rudimentär (Python/Java). Code soll daher ei
 - **IndexedDB über Dexie.js** als lokale Datenbank.
 - **ts-fsrs** für den Wiederholungsalgorithmus (FSRS).
 - **WanaKana** für Romaji→Kana-Umwandlung bei der Eingabe.
-- **kuromoji.js** (oder vergleichbar) zur Zerlegung japanischer Sätze in Wörter (für Lesepassagen).
+- **kuromoji.js** (umgesetzt mit dem gepflegten Fork `@patdx/kuromoji`) zur Zerlegung japanischer Sätze in Wörter (für Lesepassagen).
 - **Web Speech API** (`ja-JP`) für Sprachausgabe – keine Audiodateien nötig.
 - **Hosting**: statisch auf GitHub Pages (kostenlos). Kein eigener Server.
 - **Synchronisation**: JSON-Datei in einem **privaten GitHub-Repository** über die GitHub-API, Zugriff mit einem Fine-grained Token, der nur dieses Repo lesen/schreiben darf (siehe Abschnitt 8). *(Geändert am 2026-11-21: ursprünglich OneDrive/MSAL – siehe ENTSCHEIDUNGEN.md.)*
@@ -83,6 +83,7 @@ Eine Beispiel-CSV mit 10 Wörtern und eine Vorlage zum Ausfüllen liegen im Repo
 ## 5. Hintergrund-Wörterbuch
 
 - Freie Wörterbuchdaten (JMdict – CC BY-SA; enthält englische und teils deutsche Bedeutungen; für Deutsch zusätzlich Wadoku prüfen, **Lizenz vorher klären und in der README dokumentieren**).
+  > Umsetzung (2026-11-23): Deutsch aus **Wadoku** (EDICT2-Export), aus JMdict nur „common“ für Häufigkeit, Wortart und englische Notlösung; die deutschen JMdict-Bedeutungen werden wegen ungeklärter Rechte nicht verwendet. Details in LICENSES.md und ENTSCHEIDUNGEN.md.
 - Nur als Nachschlage- und Vorschlagsquelle, **nicht** als Lernliste. Eigene Vokabeln entstehen, indem man einen Eintrag übernimmt („aktiviert“).
 - Optional: Wörter nach Häufigkeit oder JLPT-Stufe filtern und gezielt übernehmen.
 - Daten werden einmalig per Skript in ein kompaktes Format umgewandelt und beim ersten Start geladen (Größe beachten; ggf. erst auf Nachfrage herunterladen).

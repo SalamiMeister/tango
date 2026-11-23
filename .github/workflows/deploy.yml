@@ -1,10 +1,14 @@
 # Baut die App bei jedem Push auf "main" und veröffentlicht sie auf GitHub Pages.
+# Zusätzlich einmal im Monat, damit Wörterbuch- und Satzdaten aktuell bleiben
+# (die JMdict-Lizenz verlangt regelmäßige Aktualisierung).
 # Einmalig nötig: GitHub → Repository → Settings → Pages → Source: "GitHub Actions".
 name: Deploy auf GitHub Pages
 
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '0 4 2 * *' # am 2. jedes Monats um 4 Uhr UTC
   workflow_dispatch:
 
 permissions:
@@ -27,6 +31,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+
+      # Rohdaten (Wadoku, JMdict, Tatoeba) pro Monat nur einmal herunterladen
+      - id: month
+        run: echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: data-raw
+          key: data-raw-${{ steps.month.outputs.month }}
+      - run: npm run data:fetch
+      - run: npm run data
+
       - run: npm run build
         env:
           # Die App liegt unter https://<name>.github.io/<repo>/

@@ -93,15 +93,46 @@ export interface Review extends SyncFields {
   history: RatingEntry[];
 }
 
-/** Lesetext (wird ab Stufe 3 genutzt, Tabelle existiert schon). */
+/**
+ * Ein Wort eines zerlegten japanischen Textes (kompakt als Liste):
+ * [Oberfläche, Grundform, Lesung in Hiragana (nur bei Kanji, sonst ""), Inhaltswort 1/0]
+ * Inhaltswörter zählen für die Bekanntheitsquote; Partikeln, Hilfsverben, Satzzeichen nicht.
+ */
+export type Token = [surface: string, base: string, reading: string, content: 0 | 1];
+
+/** Eigener Lesetext (selbst eingefügt oder KI-erzeugt). */
 export interface Passage extends SyncFields {
   id: string;
+  title?: string;
   text_ja: string;
   translation?: string;
+  /** „eigen“ oder „KI“ */
   source?: string;
+  /** Zerlegung in Wörter (beim Speichern berechnet) */
+  tokens?: Token[];
+  /** Eigene Vokabeln, die im Text vorkommen */
   word_ids: string[];
   known_ratio: number;
   created_at: number;
+}
+
+/** Eintrag im Hintergrund-Wörterbuch (schreibgeschützt, wird NICHT synchronisiert). */
+export interface DictEntry {
+  id?: number;
+  kana: string;
+  kanji: string[];
+  gloss: string[];
+  pos?: PartOfSpeech;
+  /** Bits: 1 = häufig, 2 = wird meist in Kana geschrieben */
+  flags: number;
+  /** Quelle: w = Wadoku (deutsch), j = JMdict (englisch) */
+  src: 'w' | 'j';
+  /** Häufigkeit in den Tatoeba-Sätzen */
+  freq: number;
+  /** Alle Schreibweisen zum Suchen (Kanji, Kana, Kana in Hiragana) */
+  forms: string[];
+  /** 'core' = häufige Wörter, 'full' = erweitertes Wörterbuch */
+  pack: 'core' | 'full';
 }
 
 export type DirectionSetting = 'both' | Direction;

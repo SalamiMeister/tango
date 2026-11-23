@@ -185,6 +185,18 @@ export function Home() {
           </details>
         </>
       )}
+      <p className="home-credit">
+        Wörterbuch:{' '}
+        <a href="https://www.wadoku.de" target="_blank" rel="noreferrer">
+          Wadoku.de
+        </a>{' '}
+        (
+        <a href="https://www.wadoku.de/wiki/display/WAD/Wadoku.de-Daten+Lizenz" target="_blank" rel="noreferrer">
+          Lizenz
+        </a>
+        ) · JMdict (EDRDG) · Sätze: Tatoeba ·{' '}
+        <a href="#/einstellungen">Quellen &amp; Lizenzen</a>
+      </p>
     </div>
   );
 }

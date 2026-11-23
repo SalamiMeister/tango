@@ -5,7 +5,7 @@ Läuft im Browser auf Handy und PC, funktioniert offline, lernt mit Spaced Repet
 
 Die verbindliche Planung steht in [SPEC.md](SPEC.md), technische Entscheidungen in [ENTSCHEIDUNGEN.md](ENTSCHEIDUNGEN.md).
 
-**Stand: Stufe 2** – Stufe 1 (Schnelleingabe, Import, Backup, Vokabelliste, Karteikarten mit FSRS, offlinefähig) plus automatische Synchronisation über ein privates GitHub-Repo, die Modi Multiple Choice, Eintippen, Hören und Zuordnen, Wischgesten und Tastenkürzel.
+**Stand: Stufe 3** – Schnelleingabe, Import, Backup, Vokabelliste, Karteikarten mit FSRS, offlinefähig (Stufe 1); Synchronisation über ein privates GitHub-Repo, Multiple Choice, Eintippen, Hören, Zuordnen, Wischgesten (Stufe 2); Wörterbuch mit Vorschlägen beim Eingeben und Ergänzung beim Import, Lesen mit Beispielsätzen, eigenen Texten und KI-Prompt (Stufe 3).
 
 Online: **https://salamimeister.github.io/tango/**
 
@@ -50,7 +50,21 @@ Beenden: im Terminal `Strg + C`.
 npm test
 ```
 
-Prüft automatisch: Tabellen-/CSV-Import, Duplikaterkennung, FSRS-Anbindung, Kartenauswahl, Antwortprüfung beim Eintippen, Auswahl falscher Antworten, Zusammenführen bei Backup und Synchronisation.
+Prüft automatisch: Tabellen-/CSV-Import, Duplikaterkennung, FSRS-Anbindung, Kartenauswahl, Antwortprüfung beim Eintippen (inkl. langer Vokale), Auswahl falscher Antworten, Zusammenführen bei Backup und Synchronisation, Wörterbuch-Suche und Import-Ergänzung, Bekanntheitsquote von Sätzen, Furigana, KI-Prompt, Bereinigung der Wadoku-Daten.
+
+### Wörterbuch- und Satzdaten (nur für die Lese-/Wörterbuch-Funktionen am PC nötig)
+
+Die Daten liegen nicht im Repository; GitHub erzeugt sie beim Veröffentlichen automatisch. Lokal einmalig in **Git Bash** (braucht `tar` und `bzip2`):
+
+```bash
+npm run data:fetch
+```
+
+```bash
+npm run data
+```
+
+Das lädt ca. 35 MB Rohdaten nach `data-raw/` und erzeugt `public/data/` und `public/kuromoji/`.
 
 ## 4. Offline-Betrieb testen (am PC)
 
@@ -176,8 +190,10 @@ Wenn der Schlüssel abläuft: neuen Token erstellen (Schritt 2), dann **Trennen*
 |---|---|
 | Start | Großer Knopf „Lernen (N)“ startet sofort Karteikarten (20 Karten). Darunter mit einem Tipp: **Auswahl**, **Tippen**, **Hören**, **Zuordnen**. „Gezielt lernen“: Modus, Lektion, Richtung, Wortart, nur fällige, nur Problemwörter. |
 | „+“-Knopf / Taste **N** | Schnelleingabe: Romaji tippen → wird zu Kana (GROSSBUCHSTABEN → Katakana). **Enter** speichert, Quelle + Lektion bleiben stehen. |
-| Import | Zeilen aus Excel/Google Sheets einfügen oder CSV wählen → Spalten werden erraten, per Auswahlfeld korrigierbar → Import. |
+| Import (über „Vokabeln“) | Zeilen aus Excel/Google Sheets einfügen oder CSV wählen → Spalten werden erraten, per Auswahlfeld korrigierbar → Import. Mit Wörterbuch werden fehlende Kanji, Bedeutungen und Wortarten ergänzt (nur wenn eindeutig). |
 | Vokabeln | Suchen (auch per Romaji), filtern, antippen zum Bearbeiten, Häkchen für Massenbearbeitung. |
+| Lesen | **Beispielsätze**: Tatoeba-Sätze, die du mit deinen Vokabeln lesen kannst (Standard ≥ 90 % bekannt). **Meine Texte**: eigene Texte einfügen oder per „Prompt für KI“ von Claude schreiben lassen. Wort antippen → Lesung, Bedeutung, „Übernehmen“. Furigana ein/aus, Vorlesen, Übersetzung auf Tipp. |
+| Mehr → Wörterbuch & Lesedaten | Wörterbuch (~1 MB) laden – danach Vorschläge beim Tippen. Optional erweitertes Wörterbuch (~15 MB), Beispielsätze (~5 MB), Textanalyse (~17 MB, für eigene Texte). |
 | Mehr | Tageslimit, Einheitsgröße, Richtung, Farbschema, Backup. |
 
 ### Lernmodi
@@ -186,7 +202,7 @@ Wenn der Schlüssel abläuft: neuen Token erstellen (Schritt 2), dann **Trennen*
 |---|---|---|
 | Karteikarten | Tippen/Leertaste = umdrehen, dann bewerten. **Wischen:** ← Nochmal · → Gut · ↑ Leicht · ↓ Schwer | wie gewählt |
 | Multiple Choice | 4 Antworten, falsche bevorzugt aus gleicher Lektion/Wortart | richtig = Gut, falsch = Nochmal |
-| Eintippen | DE→JP: Romaji tippen (wird zu Kana), Kana oder Kanji zählen. JP→DE: Groß-/Kleinschreibung, Artikel, Klammern egal, eine Bedeutung genügt | richtig = Gut, Tippfehler = Schwer, falsch = Nochmal; „Ich lag richtig“ = Gut |
+| Eintippen | DE→JP: Romaji tippen (wird zu Kana), Kana oder Kanji zählen. Lange Vokale in jeder Schreibweise: ohayou, ohayoo (Genki), ohayō (Hepburn); kurz/lang bleibt verschieden (obasan ≠ obaasan). JP→DE: Groß-/Kleinschreibung, Artikel, Klammern egal, eine Bedeutung genügt | richtig = Gut, Tippfehler = Schwer, falsch = Nochmal; „Ich lag richtig“ = Gut |
 | Hören | Wort wird vorgelesen, Bedeutung wählen | wie Multiple Choice (Richtung JP→DE) |
 | Zuordnen | 6 Paare auf Zeit verbinden | keine – reine Abwechslung |
 
@@ -228,6 +244,8 @@ src/
   router.ts           Seitenwechsel über #/adresse
   learn/              Lernmodi (Karteikarte, Auswahl, Eintippen, Hören, Zuordnen) + Ablauf einer Einheit
   sync/               Synchronisation über GitHub (syncCore = Zusammenführen, github = API, syncManager = wann)
+  dict/               Wörterbuch (dictCore = Suche/Sortierung/Import-Ergänzung, dict = Laden und Datenbank)
+  reading/            Lesen (readingCore = Bekanntheitsquote/Furigana/Prompt, tokenizer = kuromoji, tatoeba)
   lib/
     answer.ts         Prüfung getippter Antworten
     choices.ts        falsche Antworten für Multiple Choice
@@ -242,6 +260,8 @@ src/
   components/         Schnelleingabe, Formular, Hinweis-Leiste
 examples/             Beispiel-CSV und Vorlage
 scripts/make-icons.mjs  erzeugt die App-Icons
+scripts/fetch-data.mjs  lädt Wadoku, JMdict, Tatoeba (aktuellste Versionen)
+scripts/build-data.mjs  wandelt sie in public/data/ um (Wörterbuch, Sätze)
 ```
 
 Lizenzen: [LICENSES.md](LICENSES.md).

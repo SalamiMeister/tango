@@ -1025,3 +1025,312 @@ textarea.paste {
   width: 100%;
   height: auto;
 }
+
+/* ================= Stufe 3 ================= */
+
+/* ---------- Wörterbuch-Vorschläge ---------- */
+.suggestions {
+  list-style: none;
+  margin: -6px 0 6px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.suggestions li + li {
+  border-top: 1px solid var(--border);
+}
+.suggestions button {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  text-align: left;
+  border: none;
+  border-radius: 0;
+  min-height: 46px;
+  padding: 8px 12px;
+  background: none;
+}
+.suggestions button:hover {
+  background: var(--surface-2);
+}
+.sg-jp {
+  font-size: 1.15rem;
+  white-space: nowrap;
+}
+.sg-jp small {
+  margin-left: 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.sg-de {
+  font-size: 0.9rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dict-credit {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: -4px 0 12px;
+}
+.dict-credit a {
+  color: inherit;
+}
+button.link.inline {
+  min-height: 0;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* ---------- Lesen: Übersicht ---------- */
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.tabs button {
+  flex: 1;
+}
+.tabs button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.reading-filter label {
+  margin-bottom: 4px;
+}
+.reading-filter select {
+  width: auto;
+}
+.sentence-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 16px;
+}
+.sentence-list li + li {
+  border-top: 1px solid var(--border);
+}
+.sentence-list button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 10px 4px;
+}
+.sl-ja {
+  font-size: 1.15rem;
+}
+.sl-ja small {
+  font-size: 0.75rem;
+}
+.sl-ratio {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--hard);
+}
+.sl-ratio.full {
+  color: var(--good);
+}
+.credit a,
+.home-credit a {
+  color: inherit;
+}
+.home-credit {
+  margin-top: 28px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ---------- Leseansicht ---------- */
+.page-head .grow {
+  flex: 1;
+}
+button.toggle {
+  min-height: 36px;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+button.toggle.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.reading-text {
+  font-size: 1.6rem;
+  line-height: 2.1;
+  margin: 18px 0 6px;
+  word-break: break-all;
+}
+.reading-text.with-furigana {
+  line-height: 2.6;
+}
+.reading-text rt {
+  font-size: 0.5em;
+  color: var(--muted);
+}
+.tok {
+  border: none;
+  background: none;
+  padding: 0 1px;
+  min-height: 0;
+  font: inherit;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.tok.unknown {
+  text-decoration: underline dotted var(--hard);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+.tok.sel {
+  background: color-mix(in srgb, var(--easy) 25%, transparent);
+}
+.tok.sample {
+  font-size: inherit;
+  cursor: default;
+}
+.legend {
+  margin-bottom: 18px;
+}
+.translation {
+  font-size: 1.05rem;
+}
+.popup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.25);
+}
+.popup {
+  width: min(560px, 100vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px 18px 0 0;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  box-shadow: 0 -6px 24px rgb(0 0 0 / 0.2);
+  animation: sheet-in 0.15s ease-out;
+}
+@media (min-width: 700px) {
+  .popup-backdrop {
+    align-items: center;
+  }
+  .popup {
+    border-radius: 18px;
+  }
+}
+.popup-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.popup-head > div {
+  flex: 1;
+}
+.popup-word {
+  font-size: 1.8rem;
+}
+.popup-reading {
+  font-size: 1.1rem;
+  color: var(--muted);
+}
+.popup-own {
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 10px 0;
+}
+.popup-entries {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+.popup-entries li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+.popup-entries li + li {
+  border-top: 1px solid var(--border);
+}
+.popup .dict-credit {
+  margin: 10px 0 0;
+}
+
+/* ---------- Prompt / Texte ---------- */
+.prompt-box {
+  font-size: 0.85rem;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+/* ---------- Import: Ergänzung ---------- */
+.enrich-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin-bottom: 12px;
+}
+.enrich-options label {
+  margin: 0;
+}
+.preview td.result-cell {
+  white-space: normal;
+  min-width: 180px;
+}
+
+/* ---------- Vokabelliste: Kopf ---------- */
+.list-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.list-title h2 {
+  margin: 0;
+}
+
+/* ---------- Einstellungen: Daten ---------- */
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.data-row button {
+  flex-shrink: 0;
+}
+.load-progress {
+  margin-top: 10px;
+}
+.progress .indeterminate {
+  animation: pulse 1s ease-in-out infinite alternate;
+}
+@keyframes pulse {
+  from {
+    opacity: 0.3;
+  }
+}
+.about h4 {
+  margin: 14px 0 4px;
+  font-size: 0.95rem;
+}
+.about a {
+  color: var(--accent);
+}

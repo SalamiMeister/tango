@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { checkGerman, checkJapanese, editDistance, normalizeGerman } from './answer';
 import { pickDistractors } from './choices';
+import { analyzeTable, rowsToDrafts } from './tableImport';
+import { readFileSync } from 'node:fs';
+import { toRomaji } from 'wanakana';
 import type { Word } from '../types';
 
 describe('normalizeGerman', () => {
@@ -68,6 +71,121 @@ describe('checkJapanese (DE→JP)', () => {
   it('falsch', () => {
     expect(checkJapanese('nomu', taberu)).toBe('wrong');
     expect(checkJapanese('', taberu)).toBe('wrong');
+  });
+});
+
+describe('checkJapanese – lange Vokale in anderer Schreibweise', () => {
+  const ok = (input: string, kana: string) => expect(checkJapanese(input, { kana }), `${input} → ${kana}`).not.toBe('wrong');
+
+  it('Tipp-Romaji bleibt „correct“ (nicht nur „variant“)', () => {
+    expect(checkJapanese('ohayou', { kana: 'おはよう' })).toBe('correct');
+    expect(checkJapanese('sensei', { kana: 'せんせい' })).toBe('correct');
+    expect(checkJapanese('おはよう', { kana: 'おはよう' })).toBe('correct');
+  });
+
+  it('Genki-Schreibweise (doppelte Vokale) → variant', () => {
+    expect(checkJapanese('ohayoo', { kana: 'おはよう' })).toBe('variant');
+    expect(checkJapanese('sensee', { kana: 'せんせい' })).toBe('variant');
+    expect(checkJapanese('gakusee', { kana: 'がくせい' })).toBe('variant');
+    expect(checkJapanese('tookyoo', { kana: 'とうきょう' })).toBe('variant');
+    expect(checkJapanese('kyoo', { kana: 'きょう' })).toBe('variant');
+    expect(checkJapanese('eego', { kana: 'えいご' })).toBe('variant');
+  });
+
+  it('Hepburn mit Makron → variant', () => {
+    expect(checkJapanese('ohayō', { kana: 'おはよう' })).toBe('variant');
+    expect(checkJapanese('Tōkyō', { kana: 'とうきょう' })).toBe('variant');
+    expect(checkJapanese('sūgaku', { kana: 'すうがく' })).toBe('variant');
+  });
+
+  it('Katakana-Langvokale: Strich, doppelter Vokal, ou/ei', () => {
+    ok('ko-hi-', 'コーヒー');
+    ok('koohii', 'コーヒー');
+    ok('kouhii', 'コーヒー');
+    ok('seetaa', 'セーター');
+    ok('biiru', 'ビール');
+    ok('kaado', 'カード');
+    ok('suupaa', 'スーパー');
+    ok('keeki', 'ケーキ');
+    ok('kēki', 'ケーキ');
+  });
+
+  it('auch wenn das Wort selbst mit doppeltem Vokal gespeichert ist', () => {
+    ok('ookii', 'おおきい');
+    ok('oneesan', 'おねえさん');
+    ok('oniisan', 'おにいさん');
+    ok('ojiisan', 'おじいさん');
+    expect(checkJapanese('toori', { kana: 'とおり' })).toBe('correct');
+  });
+
+  // Die wichtigste Eigenschaft: kurz und lang bleiben verschieden.
+  it.each([
+    ['obasan', 'おばあさん'], // Tante ≠ Großmutter
+    ['obaasan', 'おばさん'],
+    ['ojisan', 'おじいさん'], // Onkel ≠ Großvater
+    ['ojiisan', 'おじさん'],
+    ['yuki', 'ゆうき'], // Schnee ≠ Mut
+    ['yuuki', 'ゆき'],
+    ['koko', 'こうこう'], // hier ≠ Oberschule
+    ['kookoo', 'ここ'],
+    ['ie', 'いいえ'], // Haus ≠ nein
+    ['iie', 'いえ'],
+    ['ohayo', 'おはよう'],
+    ['sense', 'せんせい'],
+    ['biru', 'ビール'], // Gebäude ≠ Bier
+    ['kado', 'カード'],
+    ['heya', 'へいや'],
+    ['shujin', 'しゅうじん'],
+    ['iu', 'いい'], // u ist kein langes i
+    ['ii', 'いう'],
+    ['eigo', 'えいがく'],
+    ['ooki', 'おおきい'],
+  ])('„%s“ ist NICHT %s', (input, kana) => {
+    expect(checkJapanese(input, { kana })).toBe('wrong');
+  });
+
+  it('o+u bzw. e+i nur in dieser Reihenfolge (u+o, i+e sind keine Langvokale)', () => {
+    expect(checkJapanese('kuo', { kana: 'くう' })).toBe('wrong');
+    expect(checkJapanese('kie', { kana: 'きい' })).toBe('wrong');
+  });
+
+  it('bekannte Grenze: echte おう/おお-Wortpaare gelten als gleich (mit Hinweis auf Kana)', () => {
+    // こおり (Eis) / こうり (Einzelhandel) – sehr selten, daher bewusst akzeptiert
+    expect(checkJapanese('koori', { kana: 'こうり' })).toBe('variant');
+  });
+
+  it('eigene Romaji-Schreibweise des Wortes zählt als exakt richtig', () => {
+    expect(checkJapanese('koohii', { kana: 'コーヒー' })).toBe('correct');
+    expect(checkJapanese('ohayoo', { kana: 'おはよう', romaji: 'ohayoo' })).toBe('correct');
+  });
+
+  it('Kanji-Antwort bleibt exakt', () => {
+    expect(checkJapanese('食べる', { kana: 'たべる', kanji: '食べる' })).toBe('correct');
+    expect(checkJapanese('食る', { kana: 'たべる', kanji: '食べる' })).toBe('wrong');
+  });
+});
+
+describe('checkJapanese – Kreuztest aller Beispielwörter', () => {
+  it('kein Wort zählt als richtige Antwort für ein anderes', () => {
+    const files = ['examples/beispiel-vokabeln.csv', 'examples/test-20-woerter.txt'];
+    const words = files.flatMap((f) => {
+      const a = analyzeTable(readFileSync(f, 'utf-8'));
+      return rowsToDrafts(a.rows, a.mapping, a.hasHeader).flatMap((r) => (r.draft ? [r.draft] : []));
+    });
+    // zusätzlich typische Genki-Wörter mit langen Vokalen
+    const extra = ['おはよう', 'ありがとう', 'こうこう', 'ここ', 'おばあさん', 'おばさん', 'ゆうき', 'ゆき', 'きょう', 'きよう', 'えいが', 'えいご', 'とけい', 'とけ', 'ビール', 'ビル', 'コーヒー', 'こひ'];
+    const kanaList = [...new Set([...words.map((w) => w.kana), ...extra])];
+    expect(kanaList.length).toBeGreaterThan(40);
+    for (const a of kanaList) {
+      for (const b of kanaList) {
+        if (a === b) continue;
+        for (const input of [a, toRomaji(a)]) {
+          expect(checkJapanese(input, { kana: b }), `„${input}“ gegen ${b}`).toBe('wrong');
+        }
+      }
+      // und jedes Wort ist für sich selbst richtig
+      expect(checkJapanese(toRomaji(a), { kana: a }), a).toBe('correct');
+    }
   });
 });
 

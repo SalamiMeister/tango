@@ -7,6 +7,7 @@ import { App } from './App';
 import { ToastProvider } from './components/Toast';
 import { setPref } from './lib/localPrefs';
 import { startAutoSync } from './sync/syncManager';
+import { autoUpdateDict } from './dict/dict';
 import './styles.css';
 
 // Service Worker: speichert die App für den Offline-Betrieb und lädt Updates im Hintergrund.
@@ -22,6 +23,9 @@ navigator.storage?.persist?.().catch(() => {});
 
 // Automatische Synchronisation (nur aktiv, wenn unter Mehr → Synchronisation eingerichtet)
 startAutoSync();
+
+// Wörterbuch (falls geladen) höchstens einmal pro Woche auf neue Daten prüfen
+setTimeout(() => autoUpdateDict().catch(() => {}), 5000);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

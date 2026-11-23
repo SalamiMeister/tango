@@ -38,3 +38,25 @@ Kurze Begründungen für Festlegungen, die SPEC.md offen lässt oder leicht abwa
 **Problemwörter** = Karte mindestens zweimal vergessen (Lapses ≥ 2 oder ≥ 2× „Nochmal“ nach der ersten Lernphase). Mit dem Filter werden sie unabhängig von der Fälligkeit geübt.
 
 **Wischgesten** auf der Karteikarte: ← Nochmal, → Gut, ↑ Leicht, ↓ Schwer.
+
+## 2026-11-23 – Lange Vokale beim Eintippen
+
+Romaji-Anzeige bleibt Tipp-Romaji (おはよう → „ohayou“). Genki schreibt lange Vokale doppelt („ohayoo“, „sensee“), Hepburn mit Makron („ohayō“). Automatisch „richtig“ umzuschreiben geht nicht zuverlässig (おもう = „omou“, nicht „omō“). Wer will, trägt das Romaji-Feld von Hand ein.
+
+Beim **Eintippen (DE→JP)** zählen alle drei Schreibweisen als richtig (`longVowelKey` in `lib/answer.ts`): gleicher Vokal doppelt, o+u, e+i und der Strich ー werden gleichgesetzt – nur für **denselben** langen Vokal. Kurz und lang bleiben verschieden (おばさん ≠ おばあさん, ゆき ≠ ゆうき, ビル ≠ ビール). Eine abweichende Schreibweise wird als „Gut“ gewertet, die App zeigt dazu die richtige Kana-Schreibweise. Bekannte Grenze: Wortpaare, die sich nur in おう/おお unterscheiden (こうり/こおり), gelten als gleich – sehr selten. Abgesichert durch Tests mit Gegenbeispielen und einen Kreuztest aller Beispielwörter.
+
+## 2026-11-23 – Stufe 3 (Wörterbuch & Lesen)
+
+**Wörterbuch: Wadoku für Deutsch, JMdict „common“ nur ergänzend.** Die deutschen Bedeutungen in JMdict haben eigene, ungeklärte Rechte; Wadoku erlaubt die Weitergabe in kostenloser, werbefreier Software mit Herkunftsangabe. Verwendet wird der EDICT2-Export (einfaches Textformat, „Beta“). Weil dort manche Leerzeichen fehlen („elektrischeBahn“), bereinigt `scripts/gloss.mjs` die Bedeutungen (mit Tests). JMdict „common“ liefert Häufigkeitsmarkierung, Wortart und „wird meist in Kana geschrieben“ (dann wird kein Kanji vorgeschlagen, z. B. おはよう). Für die Reihenfolge der Vorschläge zählt außerdem, wie oft die Grundform in den 249.000 japanischen Tatoeba-Sätzen vorkommt (先生 vor 先制).
+
+**Zwei Wörterbuch-Pakete:** „häufig“ (~26.000 Einträge, ~1 MB) für alle; „erweitert“ (~400.000, ~15 MB) optional, eher für den PC. Beide in IndexedDB (Tabelle `dict`, Datenbank-Version 2), nicht synchronisiert. Ist das häufige Wörterbuch geladen, prüft die App höchstens wöchentlich, ob es neuere Daten gibt, und aktualisiert es still.
+
+**Daten werden beim Veröffentlichen erzeugt, nicht im Repo gespeichert.** `npm run data:fetch` lädt die aktuellen Rohdaten (Wadoku-Dateiname und JMdict-Release werden automatisch ermittelt), `npm run data` wandelt sie um. Der GitHub-Workflow macht das bei jedem Push und zusätzlich monatlich (EDRDG verlangt regelmäßige Aktualisierung).
+
+**Satzzerlegung: `@patdx/kuromoji`** (gepflegter Fork von kuromoji.js, ESM, eigener Loader). Tatoeba-Sätze werden schon beim Build zerlegt (kein Analyse-Download nötig, um Beispielsätze zu lesen). Für eigene Texte lädt die App das Analyse-Wörterbuch (~17 MB) beim ersten Speichern; die Dateien liegen als `*.dat.gz.bin` vor, damit kein Server sie automatisch entpackt – die App entpackt selbst (DecompressionStream). Der Service Worker speichert sie danach für offline.
+
+**Bekanntheitsquote:** Nur Inhaltswörter zählen (keine Partikeln, Hilfsverben, Satzzeichen, Zahlen, Namen, unselbständigen Wörter). „Bekannt“ = eigene aktive Vokabel, die mindestens einmal gelernt wurde (optional auch ungelernte). Verglichen wird über die Grundform (飲みます → 飲む) und Kana/Kanji. Tatoeba: nur Sätze mit deutscher Übersetzung und 4–40 Zeichen (~49.000).
+
+**Import ergänzt aus dem Wörterbuch** – nur wenn eindeutig, nie überschreibend: fehlende Kana (aus Kanji), Kanji, Bedeutung, Wortart. Mehrere Kandidaten werden über die angegebene deutsche Bedeutung eingegrenzt (はし + „Brücke“ → 橋), sonst „mehrdeutig, bitte prüfen“. Kanji- und Bedeutungs-Ergänzung sind getrennt abschaltbar.
+
+**Navigation:** „Lesen“ ersetzt „Import“ in der unteren Leiste; Import ist über die Vokabelliste erreichbar.

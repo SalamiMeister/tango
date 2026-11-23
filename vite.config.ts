@@ -35,12 +35,27 @@ export default defineConfig({
       },
       workbox: {
         // Alles, was die App braucht, wird für den Offline-Betrieb gespeichert.
+        // Große Daten (Wörterbuch, Sätze, Textanalyse) NICHT – die werden erst auf Wunsch geladen.
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        runtimeCaching: [
+          {
+            // Wörterbuch der Textanalyse (kuromoji): einmal laden, dann offline aus dem Speicher
+            urlPattern: ({ url }) => url.pathname.includes('/kuromoji/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'kuromoji', cacheableResponse: { statuses: [200] } },
+          },
+          {
+            // Beispielsätze: sofort aus dem Speicher, im Hintergrund aktualisieren
+            urlPattern: ({ url }) => url.pathname.endsWith('/data/tatoeba.json'),
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'tatoeba', cacheableResponse: { statuses: [200] } },
+          },
+        ],
       },
     }),
   ],
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],
   },
 });

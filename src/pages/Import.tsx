@@ -1,13 +1,15 @@
 // Import: Tabelle einfügen (aus Excel/Google Sheets kopiert) oder CSV-Datei wählen.
 // → Vorschau mit Spaltenzuordnung → Duplikate behandeln → Import.
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWords } from '../hooks';
 import {
   analyzeTable,
   COLUMN_LABELS,
   rowsToDrafts,
+  validateDraft,
   type ColumnField,
+  type ParsedRow,
   type Delimiter,
 } from '../lib/tableImport';
 import { DUPLICATE_LABELS, planImport, type DuplicateStrategy } from '../lib/duplicates';
@@ -18,6 +20,11 @@ import { downloadText, readTextFile } from '../lib/download';
 import { getPref, setPref } from '../lib/localPrefs';
 import { parseLesson, splitTags } from '../lib/text';
 import templateCsv from '../../examples/vorlage.csv?raw';
+import { lookupExact, useDictInfo } from '../dict/dict';
+import { enrichDraft, type EnrichNote } from '../dict/dictCore';
+import type { WordDraft } from '../types';
+
+type Row = ParsedRow & { note?: EnrichNote };
 
 const DELIM_LABELS: Record<Delimiter, string> = { '\t': 'Tabulator', ';': 'Semikolon', ',': 'Komma' };
 const FIELDS = Object.keys(COLUMN_LABELS) as ColumnField[];
@@ -36,13 +43,17 @@ export function Import() {
   const [tags, setTags] = useState('');
   const [strategy, setStrategy] = useState<DuplicateStrategy>('skip');
   const [busy, setBusy] = useState(false);
+  const dictInfo = useDictInfo();
+  const dictReady = !!(dictInfo?.core || dictInfo?.full);
+  const [fillKanji, setFillKanji] = useState(() => getPref('importFillKanji', true));
+  const [fillMeaning, setFillMeaning] = useState(() => getPref('importFillMeaning', true));
 
   // Automatische Analyse; manuelle Änderungen (Trennzeichen/Kopfzeile/Spalten) überschreiben sie.
   const analysis = useMemo(() => (text.trim() ? analyzeTable(text, delimiter) : null), [text, delimiter]);
   const header = hasHeader ?? analysis?.hasHeader ?? false;
   const cols = mapping ?? analysis?.mapping ?? [];
 
-  const parsed = useMemo(() => {
+  const parsedRaw = useMemo(() => {
     if (!analysis) return [];
     return rowsToDrafts(analysis.rows, cols, header, {
       source: source.trim() || undefined,
@@ -50,6 +61,43 @@ export function Import() {
       tags: splitTags(tags),
     });
   }, [analysis, cols, header, source, lesson, tags]);
+
+  // Fehlende Angaben aus dem Wörterbuch ergänzen (nur wenn eindeutig, nichts wird überschrieben)
+  const [enriched, setEnriched] = useState<Row[] | null>(null);
+  useEffect(() => {
+    setEnriched(null);
+    if (!dictReady || (!fillKanji && !fillMeaning) || parsedRaw.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const out: Row[] = [];
+      for (const row of parsedRaw) {
+        const d = row.partial;
+        const candidates = await lookupExact(d.kanji ?? '', d.kana ?? '');
+        const { draft: e, note } = enrichDraft(d, candidates);
+        const merged: Partial<WordDraft> = {
+          ...d,
+          kana: d.kana || e.kana || '',
+          kanji: fillKanji ? e.kanji : d.kanji,
+          meaning_de: fillMeaning ? e.meaning_de : d.meaning_de,
+          part_of_speech: fillMeaning ? e.part_of_speech : d.part_of_speech,
+        };
+        const changed = merged.kana !== d.kana || merged.kanji !== d.kanji || merged.meaning_de !== d.meaning_de || merged.part_of_speech !== d.part_of_speech;
+        const error = validateDraft(merged);
+        out.push({
+          ...row,
+          partial: merged as WordDraft,
+          draft: error ? null : (merged as WordDraft),
+          error,
+          note: changed ? 'ergänzt' : note === 'ergänzt' ? null : note,
+        });
+      }
+      if (!cancelled) setEnriched(out);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [parsedRaw, dictReady, fillKanji, fillMeaning]);
+  const parsed: Row[] = enriched ?? parsedRaw;
 
   const plan = useMemo(
     () => planImport(parsed.flatMap((p) => (p.draft ? [p.draft] : [])), words, strategy, Date.now()),
@@ -95,10 +143,11 @@ export function Import() {
   // Status pro Zeile für die Vorschau (Fehlerzeilen haben keinen Plan-Eintrag)
   let planIndex = 0;
   const rowStatus = parsed.map((p) => {
-    if (p.error) return { cls: 'err', label: p.error };
+    const extra = p.note === 'ergänzt' ? ' · ergänzt' : p.note === 'mehrdeutig' ? ' · mehrdeutig, bitte prüfen' : '';
+    if (p.error) return { cls: 'err', label: p.error + extra };
     const r = plan.rows[planIndex++];
-    if (r.kind === 'new') return { cls: 'ok', label: 'neu' };
-    return { cls: 'dup', label: `Duplikat → ${DUPLICATE_LABELS[strategy]}` };
+    if (r.kind === 'new') return { cls: p.note === 'mehrdeutig' ? 'dup' : 'ok', label: 'neu' + extra };
+    return { cls: 'dup', label: `Duplikat → ${DUPLICATE_LABELS[strategy]}` + extra };
   });
 
   const colCount = cols.length;
@@ -181,6 +230,39 @@ export function Import() {
                 <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="–" />
               </label>
             </div>
+            {dictReady ? (
+              <div className="enrich-options">
+                <span className="muted small">Aus dem Wörterbuch ergänzen (nur wenn eindeutig, nichts wird überschrieben):</span>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={fillKanji}
+                    onChange={(e) => {
+                      setFillKanji(e.target.checked);
+                      setPref('importFillKanji', e.target.checked);
+                    }}
+                  />
+                  <span>fehlende Kanji</span>
+                </label>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={fillMeaning}
+                    onChange={(e) => {
+                      setFillMeaning(e.target.checked);
+                      setPref('importFillMeaning', e.target.checked);
+                    }}
+                  />
+                  <span>fehlende Bedeutung und Wortart</span>
+                </label>
+                {enriched === null && (fillKanji || fillMeaning) && <span className="muted small">Suche im Wörterbuch …</span>}
+              </div>
+            ) : (
+              <p className="muted small">
+                Tipp: Mit geladenem Wörterbuch (Mehr → Wörterbuch) ergänzt der Import fehlende Kanji, Bedeutungen und
+                Wortarten automatisch.
+              </p>
+            )}
             {dupCount > 0 && (
               <label>
                 <span>{dupCount} Duplikat(e) gefunden (gleiche Kana + Kanji):</span>
@@ -221,6 +303,7 @@ export function Import() {
                         </select>
                       </th>
                     ))}
+                    <th>Wird übernommen als</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -233,6 +316,11 @@ export function Import() {
                           {p.cells[c] ?? ''}
                         </td>
                       ))}
+                      <td className="result-cell" lang="ja">
+                        {p.partial.kanji ? `${p.partial.kanji}（${p.partial.kana}）` : p.partial.kana}
+                        {p.partial.meaning_de?.length ? <span lang="de"> – {p.partial.meaning_de.join(', ')}</span> : null}
+                        {p.partial.part_of_speech && <small lang="de"> · {p.partial.part_of_speech}</small>}
+                      </td>
                       <td className="status-cell">{rowStatus[i].label}</td>
                     </tr>
                   ))}

@@ -1,7 +1,7 @@
 {
   "name": "tango",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Persönlicher Japanisch-Vokabeltrainer (PWA)",
   "type": "module",
   "scripts": {
@@ -11,9 +11,12 @@
     "preview": "vite preview --open",
     "test": "vitest run",
     "test:watch": "vitest",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "data:fetch": "node scripts/fetch-data.mjs",
+    "data": "node scripts/build-data.mjs"
   },
   "dependencies": {
+    "@patdx/kuromoji": "^1.0.4",
     "dexie": "^4.4.7",
     "dexie-react-hooks": "^4.4.0",
     "qrcode-generator": "^2.0.4",

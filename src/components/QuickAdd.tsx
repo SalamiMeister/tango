@@ -7,8 +7,9 @@ import { useWords } from '../hooks';
 import { addWord, softDeleteWords } from '../repo';
 import { getPref, setPref } from '../lib/localPrefs';
 import { parseLesson } from '../lib/text';
+import type { WordDraft } from '../types';
 
-export function QuickAdd({ onClose }: { onClose: () => void }) {
+export function QuickAdd({ onClose, initial }: { onClose: () => void; initial?: Partial<WordDraft> }) {
   const words = useWords() ?? [];
   const toast = useToast();
   const sticky = getPref('quickAddSticky', { source: 'Genki 1', lesson: '' });
@@ -32,7 +33,7 @@ export function QuickAdd({ onClose }: { onClose: () => void }) {
         <WordForm
           mode="quick"
           words={words}
-          initial={{ source: sticky.source, lesson: parseLesson(sticky.lesson) }}
+          initial={{ source: sticky.source, lesson: parseLesson(sticky.lesson), ...initial }}
           onStickyChange={(source, lesson) => setPref('quickAddSticky', { source, lesson })}
           onSubmit={async (draft) => {
             const w = await addWord(draft);

@@ -320,8 +320,19 @@ export interface ParsedRow {
   /** Zeilennummer in der Tabelle (1-basiert, wie in Excel) */
   line: number;
   cells: string[];
+  /** Fertiger Entwurf – null, wenn etwas fehlt (siehe error) */
   draft: WordDraft | null;
+  /** Was aus der Zeile gelesen wurde, auch wenn es unvollständig ist (zum Ergänzen aus dem Wörterbuch) */
+  partial: WordDraft;
   error?: string;
+}
+
+/** Prüft einen Entwurf; gibt eine Fehlermeldung zurück oder undefined. */
+export function validateDraft(d: Partial<WordDraft>): string | undefined {
+  if (!d.kana) return 'Kana fehlt';
+  if (hasLatin(d.kana)) return 'Kana enthält Buchstaben';
+  if (!d.meaning_de || d.meaning_de.length === 0) return 'Bedeutung fehlt';
+  return undefined;
 }
 
 /** Wandelt die Tabellenzeilen anhand der Zuordnung in Vokabel-Entwürfe um. */
@@ -372,12 +383,8 @@ export function rowsToDrafts(
       note: one('note'),
     };
 
-    let error: string | undefined;
-    if (!kana) error = 'Kana fehlt';
-    else if (hasLatin(kana)) error = 'Kana enthält Buchstaben';
-    else if (meaning.length === 0) error = 'Bedeutung fehlt';
-
-    result.push({ line: i + 1, cells, draft: error ? null : draft, error });
+    const error = validateDraft(draft);
+    result.push({ line: i + 1, cells, draft: error ? null : draft, partial: draft, error });
   }
   return result;
 }

@@ -7,6 +7,7 @@ import { useToast } from '../components/Toast';
 import { downloadText, readTextFile } from '../lib/download';
 import { getPref } from '../lib/localPrefs';
 import { SyncSettings } from '../components/SyncSettings';
+import { DataSettings } from '../components/DataSettings';
 import type { DirectionSetting, Settings } from '../types';
 
 export function SettingsPage() {
@@ -135,16 +136,63 @@ export function SettingsPage() {
         </ul>
       </div>
 
-      <div className="card about">
-        <h3>Über</h3>
+      <DataSettings />
+
+      <div className="card about" id="ueber">
+        <h3>Über &amp; Quellen</h3>
         <p>
-          <b>Tango</b> – persönlicher Japanisch-Vokabeltrainer · Version {__APP_VERSION__}
+          <b>Tango</b> – persönlicher Japanisch-Vokabeltrainer · Version {__APP_VERSION__} · kostenlos und werbefrei
         </p>
+
+        <h4>Wörterbuchdaten</h4>
+        <p className="small">
+          Deutsche Bedeutungen aus dem japanisch-deutschen Wörterbuch <b>Wadoku</b> (Ulrich Apel und Wadoku e.V.):{' '}
+          <a href="https://www.wadoku.de" target="_blank" rel="noreferrer">
+            www.wadoku.de
+          </a>
+          . Verwendet gemäß der{' '}
+          <a href="https://www.wadoku.de/wiki/display/WAD/Wadoku.de-Daten+Lizenz" target="_blank" rel="noreferrer">
+            Wadoku.de-Daten-Lizenz
+          </a>{' '}
+          (kostenlose Weitergabe mit Herkunftsangabe). Die Daten wurden für diese App gekürzt (ohne Sätze und Namen,
+          höchstens 5 Bedeutungen je Eintrag).
+        </p>
+        <p className="small">
+          Häufigkeit, Wortarten und englische Ergänzungen aus <b>JMdict</b>. This app uses the JMdict/EDICT dictionary
+          files. These files are the property of the{' '}
+          <a href="https://www.edrdg.org/" target="_blank" rel="noreferrer">
+            Electronic Dictionary Research and Development Group
+          </a>
+          , and are used in conformance with the Group's{' '}
+          <a href="https://www.edrdg.org/edrdg/licence.html" target="_blank" rel="noreferrer">
+            licence
+          </a>{' '}
+          (CC BY-SA 4.0). Projektseite:{' '}
+          <a href="https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project" target="_blank" rel="noreferrer">
+            JMdict-EDICT Dictionary Project
+          </a>
+          . Die Daten werden monatlich aktualisiert.
+        </p>
+
+        <h4>Beispielsätze</h4>
+        <p className="small">
+          Sätze und Übersetzungen von{' '}
+          <a href="https://tatoeba.org" target="_blank" rel="noreferrer">
+            Tatoeba
+          </a>{' '}
+          unter{' '}
+          <a href="https://creativecommons.org/licenses/by/2.0/fr/" target="_blank" rel="noreferrer">
+            CC BY 2.0 FR
+          </a>
+          . Die Autorinnen und Autoren werden beim jeweiligen Satz genannt und verlinkt.
+        </p>
+
+        <h4>Software</h4>
         <p className="muted small">
           Wiederholungsplanung mit FSRS (ts-fsrs, MIT). Romaji→Kana mit WanaKana (MIT). Datenbank mit Dexie.js
-          (Apache 2.0). Oberfläche mit React (MIT). QR-Codes mit qrcode-generator (MIT). Vollständige Liste in
-          LICENSES.md. Externe Wörterbuch- oder
-          Satzdaten werden in dieser Version noch nicht verwendet.
+          (Apache 2.0). Oberfläche mit React (MIT). QR-Codes mit qrcode-generator (MIT). Textanalyse mit kuromoji.js
+          (@patdx/kuromoji, Apache 2.0) und dem Wörterbuch IPADIC (NAIST/IPA, freie Lizenz). Vollständige Liste in
+          LICENSES.md im Repository.
         </p>
       </div>
     </div>

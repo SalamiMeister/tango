@@ -103,6 +103,12 @@ export function WordList() {
   return (
     <div className="page list">
       <div className="list-head">
+        <div className="list-title">
+          <h2>Vokabeln</h2>
+          <button type="button" onClick={() => navigate('/import')}>
+            ⇪ Import
+          </button>
+        </div>
         <input
           type="search"
           placeholder="Suchen (Kana, Kanji, Romaji, Deutsch) …"

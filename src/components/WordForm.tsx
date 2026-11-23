@@ -6,6 +6,10 @@ import { PARTS_OF_SPEECH, type PartOfSpeech, type Word, type WordDraft } from '.
 import { KanaInput } from './KanaInput';
 import { findDuplicate } from '../lib/duplicates';
 import { kanaToRomaji, parseLesson, romajiToKana, splitMeanings, splitTags } from '../lib/text';
+import { searchDict, useDictInfo } from '../dict/dict';
+import { entryToDraft, glossText } from '../dict/dictCore';
+import type { DictEntry } from '../types';
+import { navigate } from '../router';
 
 interface Props {
   mode: 'quick' | 'edit';
@@ -53,10 +57,46 @@ export function WordForm({ mode, initial, words, editingId, onSubmit, onStickyCh
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const kanaRef = useRef<HTMLInputElement>(null);
+  const dictInfo = useDictInfo();
+  const dictReady = !!(dictInfo?.core || dictInfo?.full);
+  const [suggestions, setSuggestions] = useState<DictEntry[]>([]);
+  // Nach Auswahl eines Vorschlags keine neuen Vorschläge, bis wieder getippt wird
+  const [picked, setPicked] = useState(mode === 'edit');
 
   useEffect(() => {
     if (mode === 'quick') kanaRef.current?.focus();
   }, [mode]);
+
+  // Wörterbuch-Vorschläge während des Tippens (Kana oder Kanji)
+  const query = f.kanji.trim() || f.kana.trim();
+  useEffect(() => {
+    if (!dictReady || picked || !query || /[a-z]$/i.test(query)) {
+      if (!query) setSuggestions([]);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const hits = await searchDict(query, 6);
+      if (!cancelled) setSuggestions(hits);
+    }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [query, dictReady, picked]);
+
+  function applySuggestion(e: DictEntry) {
+    const d = entryToDraft(e);
+    setF((prev) => ({
+      ...prev,
+      kana: d.kana ?? prev.kana,
+      kanji: d.kanji ?? '',
+      meaning: (d.meaning_de ?? []).join(', '),
+      pos: d.part_of_speech ?? prev.pos,
+    }));
+    setPicked(true);
+    setSuggestions([]);
+  }
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((prev) => ({ ...prev, [k]: v }));
 
@@ -90,6 +130,8 @@ export function WordForm({ mode, initial, words, editingId, onSubmit, onStickyCh
         // Formular leeren, Quelle/Lektion/Tags behalten („sticky“)
         onStickyChange?.(f.source, f.lesson);
         setF((prev) => ({ ...toForm(), source: prev.source, lesson: prev.lesson, tags: prev.tags }));
+        setSuggestions([]);
+        setPicked(false);
         kanaRef.current?.focus();
       }
     } finally {
@@ -104,11 +146,47 @@ export function WordForm({ mode, initial, words, editingId, onSubmit, onStickyCh
         <KanaInput
           ref={kanaRef}
           value={f.kana}
-          onChange={(v) => set('kana', v)}
+          onChange={(v) => {
+            set('kana', v);
+            setPicked(false);
+          }}
           placeholder="z. B. taberu → たべる"
           enterKeyHint="next"
         />
       </label>
+      {suggestions.length > 0 && (
+        <ul className="suggestions" role="listbox" aria-label="Vorschläge aus dem Wörterbuch">
+          {suggestions.map((e) => (
+            <li key={e.id}>
+              <button type="button" onClick={() => applySuggestion(e)}>
+                <span className="sg-jp" lang="ja">
+                  {e.flags & 2 || e.kanji.length === 0 ? e.kana : e.kanji[0]}
+                  {!(e.flags & 2) && e.kanji.length > 0 && <small>{e.kana}</small>}
+                </span>
+                <span className="sg-de">{glossText(e)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {dictReady ? (
+        <p className="dict-credit">
+          Vorschläge aus dem Wörterbuch{' '}
+          <a href="https://www.wadoku.de" target="_blank" rel="noreferrer">
+            www.wadoku.de
+          </a>{' '}
+          und JMdict
+        </p>
+      ) : (
+        mode === 'quick' && (
+          <p className="dict-credit">
+            Tipp: Mit dem Wörterbuch gibt es Vorschläge beim Tippen –{' '}
+            <button type="button" className="link inline" onClick={() => navigate('/einstellungen')}>
+              unter Mehr laden
+            </button>
+          </p>
+        )
+      )}
       {duplicate && (
         <p className="warn">
           ⚠ Gibt es schon: {duplicate.kanji ?? duplicate.kana} – {duplicate.meaning_de.join(', ')}
@@ -116,7 +194,16 @@ export function WordForm({ mode, initial, words, editingId, onSubmit, onStickyCh
       )}
       <label>
         <span>Kanji (optional)</span>
-        <input lang="ja" value={f.kanji} onChange={(e) => set('kanji', e.target.value)} placeholder="z. B. 食べる" autoComplete="off" />
+        <input
+          lang="ja"
+          value={f.kanji}
+          onChange={(e) => {
+            set('kanji', e.target.value);
+            setPicked(false);
+          }}
+          placeholder="z. B. 食べる"
+          autoComplete="off"
+        />
       </label>
       <label>
         <span>Bedeutung (mehrere mit Komma trennen)</span>

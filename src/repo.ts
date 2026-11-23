@@ -164,3 +164,19 @@ export async function importBackup(data: unknown): Promise<BackupResult> {
   });
   return result;
 }
+
+// ---------------------------------------------------------------- Lesetexte
+
+export async function savePassage(p: Passage): Promise<void> {
+  await db.passages.put({ ...p, updated_at: Date.now() });
+}
+
+/** Weiches Löschen eines Lesetextes. Gibt eine Funktion zum Rückgängigmachen zurück. */
+export async function softDeletePassage(id: string): Promise<() => Promise<void>> {
+  const set = async (deleted: boolean) => {
+    const p = await db.passages.get(id);
+    if (p) await db.passages.put({ ...p, deleted, updated_at: Date.now() });
+  };
+  await set(true);
+  return () => set(false);
+}

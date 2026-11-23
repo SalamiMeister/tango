@@ -1,6 +1,6 @@
 // Grundgerüst: Seite je nach Adresse, Navigation unten, schwebender „+“-Knopf.
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRoute } from './router';
 import { useSettings } from './hooks';
 import { Home } from './pages/Home';
@@ -9,28 +9,37 @@ import { WordList } from './pages/WordList';
 import { WordEdit } from './pages/WordEdit';
 import { Import } from './pages/Import';
 import { SettingsPage } from './pages/SettingsPage';
+import { ReadingList } from './pages/ReadingList';
+import { ReadingView } from './pages/ReadingView';
+import { NewText } from './pages/NewText';
+import { PromptPage } from './pages/PromptPage';
 import { QuickAdd } from './components/QuickAdd';
+import { QuickAddContext } from './components/quickAddContext';
 import { SyncBadge } from './components/SyncBadge';
 import { SyncSetup } from './pages/SyncSetup';
+import type { WordDraft } from './types';
 
 const NAV = [
   { path: '', label: 'Start', icon: '⌂' },
   { path: 'lernen', label: 'Lernen', icon: '▶' },
   { path: 'vokabeln', label: 'Vokabeln', icon: '☰' },
-  { path: 'import', label: 'Import', icon: '⇪' },
+  { path: 'lesen', label: 'Lesen', icon: '読' },
   { path: 'einstellungen', label: 'Mehr', icon: '⚙' },
 ];
 
 export function App() {
   const route = useRoute();
   const settings = useSettings();
-  const [quickAdd, setQuickAdd] = useState(false);
-  const [section, id] = route.parts;
+  // null = geschlossen, sonst offen (ggf. mit Vorbelegung)
+  const [quickAdd, setQuickAdd] = useState<Partial<WordDraft> | null>(null);
+  const [section, id, sub] = route.parts;
   const learning = section === 'lernen';
+  const readingDetail = section === 'lesen' && !!id;
   const pathKey = route.parts.join('/');
+  const openQuickAdd = useCallback((initial?: Partial<WordDraft>) => setQuickAdd(initial ?? {}), []);
 
   // Beim Seitenwechsel die Schnelleingabe schließen
-  useEffect(() => setQuickAdd(false), [pathKey]);
+  useEffect(() => setQuickAdd(null), [pathKey]);
 
   // Farbschema anwenden (hell / dunkel / wie System)
   useEffect(() => {
@@ -46,7 +55,7 @@ export function App() {
       if (t.closest('input, textarea, select') || learning || e.ctrlKey || e.metaKey) return;
       if (e.key === 'n' || e.key === '+') {
         e.preventDefault();
-        setQuickAdd(true);
+        setQuickAdd({});
       }
     };
     window.addEventListener('keydown', onKey);
@@ -64,6 +73,12 @@ export function App() {
     case 'import':
       page = <Import />;
       break;
+    case 'lesen':
+      if (id === 'neu') page = <NewText />;
+      else if (id === 'prompt') page = <PromptPage />;
+      else if ((id === 'text' || id === 'satz') && sub) page = <ReadingView kind={id} id={sub} />;
+      else page = <ReadingList route={route} />;
+      break;
     case 'einstellungen':
       page = <SettingsPage />;
       break;
@@ -75,29 +90,33 @@ export function App() {
   }
 
   return (
-    <div className={`app ${learning ? 'is-learning' : ''}`}>
-      {!learning && <SyncBadge />}
-      <main>{page}</main>
+    <QuickAddContext.Provider value={openQuickAdd}>
+      <div className={`app ${learning ? 'is-learning' : ''}`}>
+        {!learning && <SyncBadge />}
+        <main>{page}</main>
 
-      {/* Auf der Import-Seite würde der Knopf den Import-Knopf verdecken */}
-      {!learning && section !== 'import' && (
-        <button type="button" className="fab" onClick={() => setQuickAdd(true)} aria-label="Neue Vokabel (Taste N)" title="Neue Vokabel (Taste N)">
-          +
-        </button>
-      )}
+        {/* Auf Import- und Leseseiten würde der Knopf andere Knöpfe verdecken */}
+        {!learning && section !== 'import' && !readingDetail && (
+          <button type="button" className="fab" onClick={() => setQuickAdd({})} aria-label="Neue Vokabel (Taste N)" title="Neue Vokabel (Taste N)">
+            +
+          </button>
+        )}
 
-      {!learning && (
-        <nav className="bottom-nav">
-          {NAV.map((n) => (
-            <a key={n.path} href={`#/${n.path}`} className={(section ?? '') === n.path ? 'active' : ''}>
-              <span className="nav-icon">{n.icon}</span>
-              <span>{n.label}</span>
-            </a>
-          ))}
-        </nav>
-      )}
+        {!learning && (
+          <nav className="bottom-nav">
+            {NAV.map((n) => (
+              <a key={n.path} href={`#/${n.path}`} className={(section ?? '') === n.path ? 'active' : ''}>
+                <span className="nav-icon" lang={n.path === 'lesen' ? 'ja' : undefined}>
+                  {n.icon}
+                </span>
+                <span>{n.label}</span>
+              </a>
+            ))}
+          </nav>
+        )}
 
-      {quickAdd && <QuickAdd onClose={() => setQuickAdd(false)} />}
-    </div>
+        {quickAdd && <QuickAdd initial={quickAdd} onClose={() => setQuickAdd(null)} />}
+      </div>
+    </QuickAddContext.Provider>
   );
 }
