@@ -32,5 +32,23 @@ export function filterFromRoute(route: Route, settings: Settings, mode: Mode): S
     pos: (q.get('wortart') as PartOfSpeech | null) ?? undefined,
     onlyDue: q.get('nurFaellig') === '1',
     onlyProblem: q.get('problem') === '1',
+    extraNew: Number(q.get('extraNeu')) || undefined,
   };
+}
+
+/** Adresse derselben Lerneinheit mit zusätzlichen neuen Karten (über das Tageslimit hinaus). */
+export function extraNewPath(route: Route, count: number): string {
+  const q = new URLSearchParams(route.query);
+  q.set('extraNeu', String(count));
+  q.delete('nurFaellig');
+  q.delete('problem');
+  return `/lernen?${q}`;
+}
+
+/** Adresse derselben Lerneinheit ohne Zusatz-Neue. */
+export function regularPath(route: Route): string {
+  const q = new URLSearchParams(route.query);
+  q.delete('extraNeu');
+  const s = q.toString();
+  return s ? `/lernen?${s}` : '/lernen';
 }

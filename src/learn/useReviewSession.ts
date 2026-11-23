@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { db } from '../db';
 import type { Grade, Review, Settings, Word } from '../types';
 import { rateReview } from '../lib/fsrs';
-import { buildSessionQueue, LEARN_AHEAD_MS, nextDueAt, queueParts } from '../lib/session';
+import { buildSessionQueue, LEARN_AHEAD_MS, nextDueAt, queueParts, type SessionFilter } from '../lib/session';
 import { loadSettings, saveReview } from '../repo';
 import type { Route } from '../router';
 import { filterFromRoute, type Mode } from './modes';
@@ -26,6 +26,20 @@ export interface Answered {
   nextQueue: Review[];
 }
 
+/** Was ohne Zusatz-Neue noch zu lernen ist (für „Geschafft“ und „Nichts fällig“). */
+export interface Outlook {
+  due: number;
+  fresh: number;
+  heldBack: number;
+}
+
+async function loadOutlook(filter: SessionFilter, settings: Settings): Promise<Outlook> {
+  const words = (await db.words.toArray()).filter((w) => !w.deleted);
+  const reviews = (await db.reviews.toArray()).filter((r) => !r.deleted);
+  const p = queueParts(words, reviews, settings, { ...filter, extraNew: undefined }, Date.now());
+  return { due: p.due.length, fresh: p.fresh.length, heldBack: p.heldBack };
+}
+
 export function useReviewSession(route: Route, mode: Mode) {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -36,6 +50,8 @@ export function useReviewSession(route: Route, mode: Mode) {
   const [answered, setAnswered] = useState<Answered | null>(null);
   const [finished, setFinished] = useState(false);
   const [nextDue, setNextDue] = useState<number | undefined>();
+  const [outlook, setOutlook] = useState<Outlook | null>(null);
+  const filterRef = useRef<SessionFilter | null>(null);
   // Zählt jede Änderung der aktuellen Karte hoch, damit Ansichten sich zurücksetzen
   const [cardKey, setCardKey] = useState(0);
   const undoStack = useRef<Snapshot[]>([]);
@@ -55,6 +71,8 @@ export function useReviewSession(route: Route, mode: Mode) {
     setPool(allWords.filter((w) => w.active));
     setQueue(buildSessionQueue(parts, s.sessionSize));
     setNextDue(nextDueAt(allWords, allReviews, filter));
+    filterRef.current = filter;
+    setOutlook(await loadOutlook(filter, s));
     setDone(0);
     setAnswered(null);
     setFinished(false);
@@ -108,6 +126,7 @@ export function useReviewSession(route: Route, mode: Mode) {
     if (nextQueue.length === 0 || newDone >= settings.sessionSize) {
       setFinished(true);
       requestSync('session');
+      if (filterRef.current) loadOutlook(filterRef.current, settings).then(setOutlook);
     }
   }
 
@@ -164,6 +183,7 @@ export function useReviewSession(route: Route, mode: Mode) {
     total,
     finished,
     nextDue,
+    outlook,
     answered,
     cardKey,
     answer,

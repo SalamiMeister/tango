@@ -2,7 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { useReviews, useSettings, useWords } from '../hooks';
-import { countNewToday, problemWordIds, queueParts, streakDays } from '../lib/session';
+import {
+  canLearnExtraNew,
+  countNewToday,
+  EXTRA_NEW_BATCH,
+  problemWordIds,
+  queueParts,
+  streakDays,
+} from '../lib/session';
 import { MODES, type Mode } from '../learn/modes';
 import { PARTS_OF_SPEECH } from '../types';
 import { navigate } from '../router';
@@ -31,6 +38,8 @@ export function Home() {
     return {
       due: parts.due.length,
       fresh: parts.fresh.length,
+      heldBack: parts.heldBack,
+      canExtra: canLearnExtraNew(parts),
       newToday: countNewToday(reviews, now),
       words: words.length,
       active: words.filter((w) => w.active).length,
@@ -81,6 +90,13 @@ export function Home() {
               {stats.due} fällig · {stats.fresh} neu
             </small>
           </button>
+
+          {/* Tagesziel für neue erreicht → auf Wunsch trotzdem weitere neue */}
+          {stats.canExtra && (
+            <button type="button" className="extra-new" onClick={() => navigate(`/lernen?extraNeu=${EXTRA_NEW_BATCH}`)}>
+              Tagesziel erreicht ✓ – {Math.min(EXTRA_NEW_BATCH, stats.heldBack)} weitere neue lernen
+            </button>
+          )}
 
           {/* Andere Modi mit einem Tipp (gleiche Karten, andere Abfrage) */}
           <div className="mode-chips">

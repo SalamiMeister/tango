@@ -7,14 +7,14 @@ import { useToast } from '../components/Toast';
 import { formatInterval, GRADE_LABELS } from '../lib/fsrs';
 import { loadSettings } from '../repo';
 import { DEFAULT_SETTINGS, type Grade } from '../types';
-import { filterFromRoute, MODES, modeFromRoute, type Mode } from '../learn/modes';
+import { extraNewPath, filterFromRoute, MODES, modeFromRoute, regularPath, type Mode } from '../learn/modes';
 import { useReviewSession } from '../learn/useReviewSession';
 import { FlashcardView } from '../learn/FlashcardView';
 import { ChoiceView } from '../learn/ChoiceView';
 import { TypingView } from '../learn/TypingView';
 import { MatchGame } from '../learn/MatchGame';
 import { useKeys } from '../learn/useKeys';
-import type { SessionFilter } from '../lib/session';
+import { EXTRA_NEW_BATCH, type SessionFilter } from '../lib/session';
 
 export function Learn({ route }: { route: Route }) {
   const mode = modeFromRoute(route);
@@ -50,14 +50,51 @@ function ReviewPage({ route, mode }: { route: Route; mode: Mode }) {
 
   if (s.loading || !s.settings) return <div className="page">Lade …</div>;
 
+  // Tageslimit für neue Karten erreicht, aber es warten noch neue → „Noch mehr neue lernen“
+  const outlook = s.outlook;
+  const inExtra = route.query.has('extraNeu');
+  const extraCount = outlook ? Math.min(EXTRA_NEW_BATCH, outlook.heldBack) : 0;
+  const canExtra = !!outlook && outlook.fresh === 0 && outlook.heldBack > 0;
+  const leftRegular = outlook ? outlook.due + outlook.fresh : 1;
+
+  function learnExtra() {
+    // Schon in einer Zusatzrunde: einfach die nächsten neuen laden
+    if (inExtra) s.restart();
+    else navigate(extraNewPath(route, EXTRA_NEW_BATCH));
+  }
+  function continueRegular() {
+    if (inExtra) navigate(regularPath(route));
+    else s.restart();
+  }
+
+  const extraHint = canExtra && outlook && (
+    <p className="muted">
+      Dein Tagesziel von {settings.newPerDay} neuen Vokabeln ist erreicht.
+      <br />
+      Es warten noch {outlook.heldBack} neue Karten.
+    </p>
+  );
+  const extraButton = (primary: boolean) =>
+    canExtra && (
+      <button type="button" className={primary ? 'primary big' : 'big'} onClick={learnExtra}>
+        {extraCount} weitere neue lernen
+      </button>
+    );
+
   // --- Nichts zu lernen
   if (!s.finished && !s.current) {
     return (
       <div className="page center">
         <h2>Nichts fällig 🎉</h2>
         {s.nextDue && <p className="muted">Nächste Karte fällig in {formatInterval(s.nextDue - Date.now())}.</p>}
+        {extraHint}
         <div className="bottom-actions">
-          <button type="button" className="primary big" onClick={() => navigate('/lernen?modus=zuordnen')}>
+          {extraButton(true)}
+          <button
+            type="button"
+            className={canExtra ? 'big' : 'primary big'}
+            onClick={() => navigate('/lernen?modus=zuordnen')}
+          >
             Trotzdem üben: Zuordnen
           </button>
           <button type="button" className="big" onClick={() => navigate('/')}>
@@ -74,10 +111,14 @@ function ReviewPage({ route, mode }: { route: Route; mode: Mode }) {
       <div className="page center">
         <h2>Geschafft! 🎉</h2>
         <p>{s.done} Karten bewertet.</p>
+        {extraHint}
         <div className="bottom-actions">
-          <button type="button" className="primary big" onClick={s.restart}>
-            Weiter lernen
-          </button>
+          {leftRegular > 0 && (
+            <button type="button" className="primary big" onClick={continueRegular}>
+              Weiter lernen ({leftRegular})
+            </button>
+          )}
+          {extraButton(leftRegular === 0)}
           <button type="button" className="big" onClick={() => navigate('/')}>
             Fertig
           </button>

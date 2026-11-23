@@ -799,6 +799,12 @@ textarea.paste {
   padding: 6px 4px;
   font-size: 0.9rem;
 }
+button.extra-new {
+  width: 100%;
+  margin-top: 10px;
+  border-color: var(--accent);
+  color: var(--accent);
+}
 
 /* ---------- Karteikarte: Wischen ---------- */
 .flashcard {

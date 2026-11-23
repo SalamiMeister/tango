@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSessionQueue, countNewToday, queueParts, streakDays } from './session';
+import { buildSessionQueue, canLearnExtraNew, countNewToday, queueParts, streakDays } from './session';
 import { newReview, rateReview } from './fsrs';
 import { recordsToApply } from './merge';
 import { DEFAULT_SETTINGS, type Review, type Word } from '../types';
@@ -41,6 +41,36 @@ describe('queueParts', () => {
     const learned = reviews.map((r, i) => (i < 6 && r.direction === 'jp_de' ? rateReview(r, 3, NOW - 1000) : r));
     expect(countNewToday(learned, NOW)).toBe(3);
     expect(queueParts(words, learned, settings, { direction: 'jp_de' }, NOW).fresh).toHaveLength(2);
+  });
+
+  it('Zusatz-Neue über das Tageslimit hinaus', () => {
+    const words = Array.from({ length: 30 }, (_, i) => word(`w${i + 1}`));
+    const settings = { ...DEFAULT_SETTINGS, newPerDay: 5 };
+    // Heute schon 5 neue gelernt → Limit erreicht
+    const reviews = words
+      .flatMap(both)
+      .filter((r) => r.direction === 'jp_de')
+      .map((r, i) => (i < 5 ? rateReview(r, 3, NOW - 1000) : r));
+    const normal = queueParts(words, reviews, settings, { direction: 'jp_de' }, NOW);
+    expect(normal.fresh).toHaveLength(0);
+    expect(normal.heldBack).toBe(25);
+    expect(canLearnExtraNew(normal)).toBe(true);
+
+    const extra = queueParts(words, reviews, settings, { direction: 'jp_de', extraNew: 10 }, NOW);
+    expect(extra.fresh.map((r) => r.word_id)).toEqual(words.slice(5, 15).map((w) => w.id));
+    expect(extra.heldBack).toBe(15);
+  });
+
+  it('kein „weitere neue“, solange das Limit nicht erreicht ist oder nichts Neues da ist', () => {
+    const words = Array.from({ length: 3 }, (_, i) => word(`w${i + 1}`));
+    const reviews = words.flatMap(both);
+    const settings = { ...DEFAULT_SETTINGS, newPerDay: 5 };
+    const p = queueParts(words, reviews, settings, { direction: 'jp_de' }, NOW);
+    expect(p.heldBack).toBe(0);
+    expect(canLearnExtraNew(p)).toBe(false);
+    const onlyDue = queueParts(words, reviews, settings, { direction: 'jp_de', onlyDue: true, extraNew: 10 }, NOW);
+    expect(onlyDue.fresh).toHaveLength(0);
+    expect(canLearnExtraNew(onlyDue)).toBe(false);
   });
 
   it('inaktive, gelöschte und gefilterte Wörter werden ausgelassen', () => {

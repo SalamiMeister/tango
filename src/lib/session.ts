@@ -18,7 +18,12 @@ export interface SessionFilter {
   pos?: PartOfSpeech;
   /** Nur Problemwörter – diese werden geübt, auch wenn sie noch nicht fällig sind */
   onlyProblem?: boolean;
+  /** So viele neue Karten zusätzlich zum Tageslimit („Noch mehr neue lernen“) */
+  extraNew?: number;
 }
+
+/** Wie viele neue Karten „Noch mehr neue lernen“ auf einmal dazunimmt. */
+export const EXTRA_NEW_BATCH = 10;
 
 /**
  * Problemwort: in einer Richtung mindestens 2× vergessen
@@ -78,6 +83,8 @@ export interface QueueParts {
   due: Review[];
   /** Neue Karten, die heute noch eingeführt werden dürfen */
   fresh: Review[];
+  /** Weitere neue Karten, die nur wegen des Tageslimits zurückgehalten werden */
+  heldBack: number;
 }
 
 /** Ermittelt fällige und neue Karten (neue begrenzt durch das Tageslimit). */
@@ -95,18 +102,19 @@ export function queueParts(
     const due = eligible
       .filter((r) => r.state !== STATE.New && problems.has(r.word_id))
       .sort((a, b) => a.due - b.due);
-    return { due, fresh: [] };
+    return { due, fresh: [], heldBack: 0 };
   }
 
   const due = eligible.filter((r) => isDue(r, now)).sort((a, b) => a.due - b.due);
 
-  if (filter.onlyDue) return { due, fresh: [] };
+  if (filter.onlyDue) return { due, fresh: [], heldBack: 0 };
 
   const wordById = new Map(words.map((w) => [w.id, w]));
   const reviewById = new Map(reviews.map((r) => [r.id, r]));
-  const remainingNew = Math.max(0, settings.newPerDay - countNewToday(reviews, now));
+  const remainingNew =
+    Math.max(0, settings.newPerDay - countNewToday(reviews, now)) + Math.max(0, filter.extraNew ?? 0);
 
-  const fresh = eligible
+  const allFresh = eligible
     .filter((r) => r.state === STATE.New)
     // Bei „beide Richtungen“ kommt DE→JP erst, nachdem JP→DE einmal gelernt wurde.
     .filter((r) => {
@@ -120,17 +128,22 @@ export function queueParts(
       // Ältere Vokabeln zuerst; bei gleichem Wort JP→DE vor DE→JP
       const dirOrder = (r: Review) => (r.direction === 'jp_de' ? 0 : 1);
       return wa.created_at - wb.created_at || dirOrder(a) - dirOrder(b) || a.id.localeCompare(b.id);
-    })
-    .slice(0, remainingNew);
+    });
+  const fresh = allFresh.slice(0, remainingNew);
 
-  return { due, fresh };
+  return { due, fresh, heldBack: allFresh.length - fresh.length };
+}
+
+/** Lohnt sich „Noch mehr neue lernen“? (Tageslimit erreicht, aber es gibt noch neue Karten) */
+export function canLearnExtraNew(parts: QueueParts): boolean {
+  return parts.fresh.length === 0 && parts.heldBack > 0;
 }
 
 /**
  * Baut die Kartenliste für eine Lerneinheit: zuerst Fälliges, dann Neues,
  * wobei neue Karten gleichmäßig zwischen die Wiederholungen gemischt werden.
  */
-export function buildSessionQueue(parts: QueueParts, size: number): Review[] {
+export function buildSessionQueue(parts: Pick<QueueParts, 'due' | 'fresh'>, size: number): Review[] {
   const due = parts.due.slice(0, size);
   const fresh = parts.fresh.slice(0, Math.max(0, size - due.length));
   if (due.length === 0) return fresh;
